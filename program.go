@@ -51,7 +51,7 @@ func main() {
 	reMethodName := regexp.MustCompile(`\s([a-zA-Z]+\s?\(.*\))`)
 	reVariableName := regexp.MustCompile(`\w+\s([^ijk<>!]|\w{2,})(?:\s?=\s?(?:.)+)\;`)
 	//reMagicNumber := regexp.MustCompile(`\w+\s([^ijk<>!]|\w{2,})(?:\s?=\s?(?:[2-9])+)\;`)
-
+	// test
 
 	lineBefore := ""
 
