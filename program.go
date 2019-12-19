@@ -4,44 +4,44 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 	"regexp"
-)
+	"strings"
 
-import "github.com/golang-collections/collections/stack" 
+	"github.com/golang-collections/collections/stack"
+)
 
 type RuleType int
 
 const (
-	CLASS_COMMENT_RULE 		RuleType = 1
-	VARIABLE_NAME_RULE 		RuleType = 2
-	METHOD_COMMENT_RULE 	RuleType = 13
-	METHOD_LENGTH_RULE 		RuleType = 23
-	VARIABLE_COMMENT_RULE	RuleType = 33
-	INDENT_RULE 			RuleType = 4
-	MAGIC_NUMBER_RULE 		RuleType = 5
-	CONSTANT_RULE 			RuleType = 6
-	LINE_LENGTH_RULE 		RuleType = 7
-	CVS_RULE 				RuleType = 8
-	IMPORT_RULE 			RuleType = 9
-	EXCEPTION_RULE 			RuleType = 10
+	ClassCommentRule    RuleType = 1
+	VariableNameRule    RuleType = 2
+	MethodCommentRule   RuleType = 13
+	MethodLengthRule    RuleType = 23
+	VariableCommentRule RuleType = 33
+	IndentRule          RuleType = 4
+	MagicNumberRule     RuleType = 5
+	ConstantRule        RuleType = 6
+	LineLengthRule      RuleType = 7
+	CvsRule             RuleType = 8
+	ImportRule          RuleType = 9
+	ExceptionRule       RuleType = 10
 )
 
 func main() {
 	if len(os.Args) == 1 {
-		fmt.Println("Il manque le fichier. Attention, c'est une déduction de 3 points sur la note finale.")
+		fmt.Println("Missing file. Warning, this substracts 3 points from the final grade.")
 		os.Exit(1)
 	}
 
 	fileName := os.Args[1]
 
 	data, err := ioutil.ReadFile(fileName)
-    if err != nil {
-        fmt.Println("Problème lors de la lecture du fichier.", err)
+	if err != nil {
+		fmt.Println("Error reading file.", err)
 		os.Exit(1)
 	}
 
-	array_str := strings.Split(string(data), "\n")
+	arrayStr := strings.Split(string(data), "\n")
 
 	isInMethod := false
 	methodName := ""
@@ -50,40 +50,40 @@ func main() {
 
 	reMethodName := regexp.MustCompile(`\s([a-zA-Z]+\s?\(.*\))`)
 	reVariableName := regexp.MustCompile(`\w+\s([^ijk<>!]|\w{2,})(?:\s?=\s?(?:.)+)\;`)
-	//reMagicNumber := regexp.MustCompile(`\w+\s([^ijk<>!]|\w{2,})(?:\s?=\s?(?:[2-9])+)\;`)
+	// reMagicNumber := regexp.MustCompile(`\w+\s([^ijk<>!]|\w{2,})(?:\s?=\s?(?:[2-9])+)\;`)
 	// test
 
 	lineBefore := ""
 
-	for lineNb, line := range array_str {
-		lineNb += 1
+	for lineNb, line := range arrayStr {
+		lineNb++
 
 		if strings.Contains(line, "class") {
 			if !(strings.Contains(line, "*") || strings.Contains(line, "//")) {
 				if !(strings.Contains(lineBefore, "*") || strings.Contains(lineBefore, "//")) {
-					smite(METHOD_COMMENT_RULE, lineNb, line)
+					smite(MethodCommentRule, lineNb, line)
 				}
 			}
 		}
 
 		/*
-		if reMagicNumber.MatchString(line) {
-			smite(MAGIC_NUMBER_RULE, lineNb, line)
-		}
+			if reMagicNumber.MatchString(line) {
+				smite(MagicNumberRule, lineNb, line)
+			}
 		*/
 
 		if reVariableName.MatchString(line) {
 			if !strings.Contains(line, "//") {
-				smite(VARIABLE_COMMENT_RULE, lineNb, line)
+				smite(VariableCommentRule, lineNb, line)
 			}
 		}
 
 		if len(line) >= 150 {
-			smite(LINE_LENGTH_RULE, lineNb, line)
+			smite(LineLengthRule, lineNb, line)
 		}
 
 		if strings.Contains(line, "\t") {
-			smite(INDENT_RULE, lineNb, line)
+			smite(IndentRule, lineNb, line)
 		}
 
 		if !isInMethod {
@@ -106,9 +106,9 @@ func main() {
 
 				if stack.Len() == 0 {
 					isInMethod = false
-					
+
 					if methodLength >= 50 {
-						smite2(METHOD_LENGTH_RULE, lineNb, line, methodName)
+						smite2(MethodLengthRule, lineNb, line, methodName)
 					}
 
 					methodLength = 0
@@ -117,9 +117,7 @@ func main() {
 			}
 		}
 
-		lineBefore = line;
-
-
+		lineBefore = line
 	}
 }
 
@@ -131,29 +129,27 @@ func smite2(rule RuleType, lineNb int, lineStr string, msg string) {
 	ruleDescription := ""
 
 	switch rule {
-		case METHOD_LENGTH_RULE:
-			ruleDescription = "The method is longer than 50 lines."
-		case LINE_LENGTH_RULE:
-			ruleDescription = "Line is longer than 120 characters."
-		case INDENT_RULE:
-			ruleDescription = "There is a tab at this line."
-		case METHOD_COMMENT_RULE:
-			ruleDescription = "The class or variable doesn't have any comment."
-		case VARIABLE_COMMENT_RULE:
-			ruleDescription = "The variable is not commented"
-		case MAGIC_NUMBER_RULE:
-			ruleDescription = "This value isn't a constant, it may be a magic number."
+	case MethodLengthRule:
+		ruleDescription = "The method is longer than 50 lines."
+	case LineLengthRule:
+		ruleDescription = "The line is longer than 120 characters."
+	case IndentRule:
+		ruleDescription = "This line is indented with tabs."
+	case MethodCommentRule:
+		ruleDescription = "The class or variable doesn't have any comment."
+	case VariableCommentRule:
+		ruleDescription = "The variable is not commented"
+	case MagicNumberRule:
+		ruleDescription = "This value isn't a constant, it may be a magic number."
 	}
 
-	fmt.Println("COMMANDMENT", rule % 10, ": " + ruleDescription)
-	if (rule == METHOD_LENGTH_RULE) {
+	fmt.Println("COMMANDMENT", rule%10, ": ", ruleDescription)
+	if rule == MethodLengthRule {
 		fmt.Println("In Method '" + msg + "'")
 	}
-	
+
 	fmt.Println("At line", lineNb)
 	fmt.Println("·", lineStr)
 	fmt.Println("You will be punished.")
-	fmt.Println("=======================================")
-
-
+	fmt.Println("=======================================\n")
 }
