@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/golang-collections/collections/stack"
@@ -25,7 +26,11 @@ const (
 	CVS_RULE              RuleType = 8
 	IMPORT_RULE           RuleType = 9
 	EXCEPTION_RULE        RuleType = 10
+	METHOD_MAX_LENGTH     int      = 50
+	LINE_MAX_LENGTH       int      = 120
 )
+
+var firstLine = true
 
 func main() {
 	if len(os.Args) == 1 {
@@ -45,7 +50,7 @@ func main() {
 
 	isInMethod := false
 	methodName := ""
-	methodLength := 0
+	methodLength := -1
 	stack := stack.New()
 
 	reMethodName := regexp.MustCompile(`\s([a-zA-Z]+\s?\(.*\))`)
@@ -59,23 +64,24 @@ func main() {
 		if strings.Contains(line, "class") {
 			if !(strings.Contains(line, "*") || strings.Contains(line, "//")) {
 				if !(strings.Contains(lineBefore, "*") || strings.Contains(lineBefore, "//")) {
-					smite(METHOD_COMMENT_RULE, lineNb, line, "")
+					smite(METHOD_COMMENT_RULE, lineNb, line, "", "")
 				}
 			}
 		}
 
 		if reVariableName.MatchString(line) {
 			if !strings.Contains(line, "//") {
-				smite(VARIABLE_COMMENT_RULE, lineNb, line, "")
+				smite(VARIABLE_COMMENT_RULE, lineNb, line, "", "")
 			}
 		}
 
-		if len(line) >= 150 {
-			smite(LINE_LENGTH_RULE, lineNb, line, "")
+		lineLength := len(line)
+		if lineLength > LINE_MAX_LENGTH {
+			smite(LINE_LENGTH_RULE, lineNb, line, "", strconv.Itoa(lineLength))
 		}
 
 		if strings.Contains(line, "\t") {
-			smite(INDENT_RULE, lineNb, line, "")
+			smite(INDENT_RULE, lineNb, line, "", "")
 		}
 
 		if !isInMethod {
@@ -99,11 +105,11 @@ func main() {
 				if stack.Len() == 0 {
 					isInMethod = false
 
-					if methodLength >= 50 {
-						smite(METHOD_LENGTH_RULE, lineNb, line, methodName)
+					if methodLength > METHOD_MAX_LENGTH {
+						smite(METHOD_LENGTH_RULE, lineNb-methodLength, line, methodName, strconv.Itoa(methodLength))
 					}
 
-					methodLength = 0
+					methodLength = -1
 					methodName = ""
 				}
 			}
@@ -113,14 +119,14 @@ func main() {
 	}
 }
 
-func smite(rule RuleType, lineNb int, lineStr string, msg string) {
+func smite(rule RuleType, lineNb int, lineStr string, msg string, additionnalMsg string) {
 	ruleDescription := ""
 
 	switch rule {
 	case METHOD_LENGTH_RULE:
-		ruleDescription = "The method is longer than 50 lines."
+		ruleDescription = "The method is longer than " + strconv.Itoa(METHOD_MAX_LENGTH) + " lines (" + additionnalMsg + ")."
 	case LINE_LENGTH_RULE:
-		ruleDescription = "Line is longer than 120 characters."
+		ruleDescription = "Line is longer than " + strconv.Itoa(LINE_MAX_LENGTH) + " characters (" + additionnalMsg + ")."
 	case INDENT_RULE:
 		ruleDescription = "There is a tab at this line."
 	case METHOD_COMMENT_RULE:
@@ -131,14 +137,18 @@ func smite(rule RuleType, lineNb int, lineStr string, msg string) {
 		ruleDescription = "This value isn't a constant, it may be a magic number."
 	}
 
+	if !firstLine {
+		fmt.Println("======================================================================")
+	}
 	fmt.Println("COMMANDMENT", rule%10, ": "+ruleDescription)
 	if rule == METHOD_LENGTH_RULE {
-		fmt.Println("In Method '" + msg + "'")
+		fmt.Println("In method '" + msg + "'")
 	}
-
 	fmt.Println("At line", lineNb)
-	fmt.Println("·", lineStr)
+	if rule != METHOD_LENGTH_RULE {
+		fmt.Println("·", lineStr)
+	}
 	fmt.Println("You will be punished.")
-	fmt.Println("=======================================")
 
+	firstLine = false
 }
