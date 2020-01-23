@@ -1,4 +1,3 @@
-test.java
-Magrathea.java
-Magrathea2.java
+test-*.java
+test-*.jr
 .vscode/
