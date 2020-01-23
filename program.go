@@ -23,7 +23,8 @@ const (
 	MAGIC_NUMBER_RULE     RuleType = 5
 	CONSTANT_RULE         RuleType = 6
 	LINE_LENGTH_RULE      RuleType = 7
-	CVS_RULE              RuleType = 8
+	CVS_RULE_HEADER       RuleType = 18
+	CVS_RULE_LOG          RuleType = 28
 	IMPORT_RULE           RuleType = 9
 	EXCEPTION_RULE        RuleType = 10
 	METHOD_MAX_LENGTH     int      = 50
@@ -48,6 +49,7 @@ func main() {
 
 	array_str := strings.Split(string(data), "\n")
 
+	cvsLog := false
 	isInMethod := false
 	methodName := ""
 	methodLength := -1
@@ -58,11 +60,19 @@ func main() {
 	reVariableName := regexp.MustCompile(`^\s*(?:\w+\s+)+([a-hl-zA-Z0-9_]|\w{2,})\s*=\s*.*?;`)
 	// Every constant that has one or more lowercase character in it
 	reConstantLow := regexp.MustCompile(`^\s*(?:\w+\s+)*(?:final\s+)+(?:\w+\s+)*(\w*[a-z]+\w*)\s*=\s*.*?;`)
+	// The CVS Header keyword
+	reCVSHeader := regexp.MustCompile(`\/\/ \$Header.*\$`)
+	// The CVS Log keyword
+	reCVSLog := regexp.MustCompile(` ?\*\* *\$Log.*\$`)
 
 	lineBefore := ""
 
 	for lineNb, line := range array_str {
 		lineNb++
+
+		if lineNb == 1 && !reCVSHeader.MatchString(line) {
+			smite(CVS_RULE_HEADER, lineNb, line, "", "")
+		}
 
 		if strings.Contains(line, "class") {
 			if !(strings.Contains(line, "*") || strings.Contains(line, "//")) {
@@ -72,10 +82,8 @@ func main() {
 			}
 		}
 
-		if reVariableName.MatchString(line) {
-			if !strings.Contains(line, "//") {
-				smite(VARIABLE_COMMENT_RULE, lineNb, line, "", "")
-			}
+		if reVariableName.MatchString(line) && !strings.Contains(line, "//") {
+			smite(VARIABLE_COMMENT_RULE, lineNb, line, "", "")
 		}
 
 		if reConstantLow.MatchString(line) {
@@ -84,11 +92,15 @@ func main() {
 
 		lineLength := len(line)
 		if lineLength > LINE_MAX_LENGTH {
-			smite(LINE_LENGTH_RULE, lineNb, line, "", strconv.Itoa(lineLength))
+			smite(LINE_LENGTH_RULE, lineNb, line, strconv.Itoa(lineLength), "")
 		}
 
 		if strings.Contains(line, "\t") {
 			smite(INDENT_RULE, lineNb, line, "", "")
+		}
+
+		if reCVSLog.MatchString(line) {
+			cvsLog = true
 		}
 
 		if !isInMethod {
@@ -113,7 +125,7 @@ func main() {
 					isInMethod = false
 
 					if methodLength > METHOD_MAX_LENGTH {
-						smite(METHOD_LENGTH_RULE, lineNb-methodLength, line, methodName, strconv.Itoa(methodLength))
+						smite(METHOD_LENGTH_RULE, lineNb-methodLength, line, strconv.Itoa(methodLength), methodName)
 					}
 
 					methodLength = -1
@@ -124,16 +136,20 @@ func main() {
 
 		lineBefore = line
 	}
+
+	if !cvsLog {
+		smite(CVS_RULE_LOG, 0, "", "", "")
+	}
 }
 
-func smite(rule RuleType, lineNb int, lineStr string, msg string, additionnalMsg string) {
+func smite(rule RuleType, lineNb int, lineStr string, msg string, msg2 string) {
 	ruleDescription := ""
 
 	switch rule {
 	case METHOD_LENGTH_RULE:
-		ruleDescription = "The method is longer than " + strconv.Itoa(METHOD_MAX_LENGTH) + " lines (" + additionnalMsg + ")."
+		ruleDescription = "The method is longer than " + strconv.Itoa(METHOD_MAX_LENGTH) + " lines (" + msg + ")."
 	case LINE_LENGTH_RULE:
-		ruleDescription = "Line is longer than " + strconv.Itoa(LINE_MAX_LENGTH) + " characters (" + additionnalMsg + ")."
+		ruleDescription = "Line is longer than " + strconv.Itoa(LINE_MAX_LENGTH) + " characters (" + msg + ")."
 	case INDENT_RULE:
 		ruleDescription = "There is a tab at this line."
 	case METHOD_COMMENT_RULE:
@@ -144,6 +160,10 @@ func smite(rule RuleType, lineNb int, lineStr string, msg string, additionnalMsg
 		ruleDescription = "This value isn't a constant, it may be a magic number."
 	case CONSTANT_RULE:
 		ruleDescription = "This constant has one or more lowercase character in it."
+	case CVS_RULE_HEADER:
+		ruleDescription = "The first line isn't the CVS header."
+	case CVS_RULE_LOG:
+		ruleDescription = "There isn't any CVS log in the file."
 	}
 
 	if !firstLine {
@@ -151,7 +171,7 @@ func smite(rule RuleType, lineNb int, lineStr string, msg string, additionnalMsg
 	}
 	fmt.Println("COMMANDMENT", rule%10, ": "+ruleDescription)
 	if rule == METHOD_LENGTH_RULE {
-		fmt.Println("In method '" + msg + "'")
+		fmt.Println("In method '" + msg2 + "'")
 	}
 	fmt.Println("At line", lineNb)
 	if rule != METHOD_LENGTH_RULE {
