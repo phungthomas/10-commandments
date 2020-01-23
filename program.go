@@ -35,7 +35,7 @@ var firstLine = true
 
 func main() {
 	if len(os.Args) == 1 {
-		fmt.Println("Il manque le fichier. Attention, c'est une déduction de 3 points sur la note finale.")
+		fmt.Println("The file is missing. Careful, it's a 3-point deduction on the final grade.")
 		os.Exit(1)
 	}
 
@@ -43,7 +43,7 @@ func main() {
 
 	data, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		fmt.Println("Problème lors de la lecture du fichier.", err)
+		fmt.Println("Error while reading the file.", err)
 		os.Exit(1)
 	}
 
