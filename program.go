@@ -54,7 +54,10 @@ func main() {
 	stack := stack.New()
 
 	reMethodName := regexp.MustCompile(`\s([a-zA-Z]+\s?\(.*\))`)
-	reVariableName := regexp.MustCompile(`\w+\s([^ijk<>!]|\w{2,})(?:\s?=\s?(?:.)+)\;`)
+	// Every variable declaration except i, j or k
+	reVariableName := regexp.MustCompile(`^\s*(?:\w+\s+)+([a-hl-zA-Z0-9_]|\w{2,})\s*=\s*.*?;`)
+	// Every constant that has one or more lowercase character in it
+	reConstantLow := regexp.MustCompile(`^\s*(?:\w+\s+)*(?:final\s+)+(?:\w+\s+)*(\w*[a-z]+\w*)\s*=\s*.*?;`)
 
 	lineBefore := ""
 
@@ -73,6 +76,10 @@ func main() {
 			if !strings.Contains(line, "//") {
 				smite(VARIABLE_COMMENT_RULE, lineNb, line, "", "")
 			}
+		}
+
+		if reConstantLow.MatchString(line) {
+			smite(CONSTANT_RULE, lineNb, line, "", "")
 		}
 
 		lineLength := len(line)
@@ -135,10 +142,12 @@ func smite(rule RuleType, lineNb int, lineStr string, msg string, additionnalMsg
 		ruleDescription = "The variable is not commented"
 	case MAGIC_NUMBER_RULE:
 		ruleDescription = "This value isn't a constant, it may be a magic number."
+	case CONSTANT_RULE:
+		ruleDescription = "This constant has one or more lowercase character in it."
 	}
 
 	if !firstLine {
-		fmt.Println("======================================================================")
+		fmt.Println("========================================================================")
 	}
 	fmt.Println("COMMANDMENT", rule%10, ": "+ruleDescription)
 	if rule == METHOD_LENGTH_RULE {
