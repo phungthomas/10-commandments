@@ -90,7 +90,7 @@ func main() {
 			smite(CONSTANT_RULE, lineNb, line, "", "")
 		}
 
-		lineLength := len(line)
+		lineLength := len(line) - 1
 		if lineLength > LINE_MAX_LENGTH {
 			smite(LINE_LENGTH_RULE, lineNb, line, strconv.Itoa(lineLength), "")
 		}
