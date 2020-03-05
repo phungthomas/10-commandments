@@ -32,6 +32,7 @@ const (
 )
 
 var firstLine = true
+var smitten = false
 
 func main() {
 	if len(os.Args) == 1 {
@@ -139,10 +140,14 @@ func main() {
 
 	if !cvsLog {
 		smite(CVS_RULE_LOG, 0, "", "", "")
+	} else if !smitten {
+		fmt.Println("You seem to be following the 10 commandments… I guess we'll see later !")
 	}
 }
 
 func smite(rule RuleType, lineNb int, lineStr string, msg string, msg2 string) {
+	smitten = true
+
 	ruleDescription := ""
 
 	switch rule {
