@@ -55,7 +55,7 @@ func main() {
 	methodLength := -1
 	stack := stack.New()
 
-	reMethodName := regexp.MustCompile(`\s([a-zA-Z]+\s?\(.*\))`)
+	reMethodName := regexp.MustCompile(`\s([a-zA-Z][a-zA-Z0-9]*\s?\(.*\))`)
 	// Every variable declaration except i, j or k
 	reVariableName := regexp.MustCompile(`^\s*(?:\w+\s+)+([a-hl-zA-Z0-9_]|\w{2,})\s*=\s*.*?;`)
 	// Every constant that has one or more lowercase character in it
